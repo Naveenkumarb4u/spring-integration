@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:int-jms="http://www.springframework.org/schema/integration/jms"
+	xmlns:jms="http://www.springframework.org/schema/jms"
+	xmlns:jaxrs="http://cxf.apache.org/jaxrs"
+	xsi:schemaLocation="http://www.springframework.org/schema/jms http://www.springframework.org/schema/jms/spring-jms.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/integration/jms http://www.springframework.org/schema/integration/jms/spring-integration-jms.xsd
+		http://cxf.apache.org/jaxrs http://cxf.apache.org/schemas/jaxrs.xsd
+		http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd">
+
+
+	<import resource="classpath:META-INF/cxf/cxf.xml" />
+	<import resource="classpath:META-INF/cxf/cxf-servlet.xml" />
+	
+	<context:component-scan base-package="com.rythmos" />
+
+	<int:channel id="requestChannel"></int:channel>
+	<int:channel id="sendEmployeeChannel"></int:channel>
+	<int:channel id="replyChannel"></int:channel>
+	<int:channel id="saveEmployeeChannel"></int:channel>
+
+	<int:gateway id="employeeServiceGateway" service-interface="com.rythmos.service.EmployeeGateway"
+			default-request-channel="requestChannel" default-reply-channel="replyChannel" /> 
+			
+	<!-- Invokes when there's any payload coming into request channel -->
+	<int:service-activator input-channel="requestChannel" output-channel="replyChannel"
+		ref="printingClass1" method="saveEmployee"></int:service-activator>
+		
+	<bean id="printingClass1" class="com.rythmos.resource.PrintingClass1" />	
+			
+	<jaxrs:server id="restContainer" address="/">
+		<jaxrs:serviceBeans>
+			<ref bean="helloService"></ref>
+			<ref bean="employeeServiceGateway"></ref>
+		</jaxrs:serviceBeans>
+	</jaxrs:server>
+
+</beans>

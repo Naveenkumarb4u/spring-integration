@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:int-file="http://www.springframework.org/schema/integration/file"
+	xmlns:int-stream="http://www.springframework.org/schema/integration/stream"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd
+		http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration-4.0.xsd
+		http://www.springframework.org/schema/integration/file http://www.springframework.org/schema/integration/file/spring-integration-file-4.0.xsd
+		http://www.springframework.org/schema/integration/stream http://www.springframework.org/schema/integration/stream/spring-integration-stream-4.0.xsd">
+
+	<!-- Adapter for reading files -->
+	<int-file:inbound-channel-adapter id="senderAdapter" channel="inputChannel"  directory="d://java/inbound"  prevent-duplicates="true">
+		<!-- <int:poller fixed-rate="5000" max-messages-per-poll="5"></int:poller> -->	<!-- This poller polls for every 5 secs and it picks max of 5 files for every poll -->
+	</int-file:inbound-channel-adapter>
+	
+	<!-- a direct channel -->
+	<int:channel id="inputChannel"></int:channel>
+
+	<!-- Our Custom Filter which rejects the files whose name starts with "msg" -->
+	<int:filter ref="selector" input-channel="inputChannel" output-channel="outputChannel"></int:filter>
+	<bean id="selector" class="com.rythmos.MySelector"></bean>
+
+	<!-- Adapter for writing files -->
+	<int-file:outbound-channel-adapter id="receivererAdapter" channel="outputChannel"  directory="d://java/outbound" ></int-file:outbound-channel-adapter>
+	
+	<int:channel id="outputChannel"></int:channel>
+	
+	 <int:poller max-messages-per-poll="1" default="true" fixed-rate="200"></int:poller>  <!-- This is common for all adapters. We can override this using local poller  -->
+</beans>

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:core="http://cxf.apache.org/core"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:int-jms="http://www.springframework.org/schema/integration/jms"
+	xmlns:jaxrs="http://cxf.apache.org/jaxrs"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://cxf.apache.org/core http://cxf.apache.org/schemas/core.xsd
+		http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+		http://www.springframework.org/schema/integration/jms http://www.springframework.org/schema/integration/jms/spring-integration-jms.xsd
+		http://cxf.apache.org/jaxrs http://cxf.apache.org/schemas/jaxrs.xsd">
+
+
+	<import resource="classpath:META-INF/cxf/cxf.xml" />
+	<import resource="classpath:META-INF/cxf/cxf-servlet.xml" />
+
+
+	<context:component-scan base-package="com.rythmos"></context:component-scan>
+	
+	<int:channel id="requestChannel"></int:channel>
+	<int:channel id="jmsOutboundChannel"/>
+	<int:channel id="jmsInboundChannel"/>
+	<int:channel id="headerChannel"/>
+	<int:channel id="responseChannel"><int:queue capacity="10"></int:queue></int:channel>
+	
+	<bean id="connectionFactory" class="org.springframework.jms.connection.CachingConnectionFactory">
+		<property name="targetConnectionFactory">
+			<bean class="org.apache.activemq.ActiveMQConnectionFactory">
+				<property name="brokerURL" value="failover:tcp://localhost:61616"/>       	
+			</bean>	
+       </property>
+    </bean>
+
+    <!--  Default Destination Queue Definition-->
+    <bean id="queue" class="org.apache.activemq.command.ActiveMQQueue">
+        <constructor-arg value="employee.queue"/>
+    </bean>
+    <bean id="topic" class="org.apache.activemq.command.ActiveMQTopic">
+        <constructor-arg value="employee.topic"/>
+    </bean>
+    
+	<int-jms:outbound-channel-adapter id="outboundAdapter" connection-factory="connectionFactory" channel="jmsOutboundChannel" destination-name="queue1"/>
+	
+	<!-- Adapter that listens to employee-queue  -->
+	<int-jms:inbound-channel-adapter id="inboundAdapter" connection-factory="connectionFactory"  channel="jmsInboundChannel" destination-name="queue1">
+		<int:poller fixed-rate="1000" ></int:poller>
+	</int-jms:inbound-channel-adapter>
+	
+	<!-- Gateway  -->
+	<int:gateway id="empService" service-interface="com.rythmos.service.EmployeeService" default-reply-timeout="10000" default-request-channel="requestChannel" default-reply-channel="responseChannel"  >
+	</int:gateway>
+	
+	<int:service-activator ref="printingClass" input-channel="requestChannel" output-channel="jmsOutboundChannel"
+		 method="saveEmployee"></int:service-activator>
+	
+	<!--Subscriber that listens to employee-queue  -->
+	<int:service-activator ref="printSubscriber" input-channel="jmsInboundChannel" output-channel="responseChannel"
+		 method="display"></int:service-activator>	 
+<!-- 		
+	 <int:header-enricher id="headEnricher" input-channel="requestChannel"
+        output-channel="jmsOutboundChannel">
+        <int:header name="justValue" value="x" />
+    </int:header-enricher>
+ -->		 
+	<bean id="printingClass" class="com.rythmos.resource.Printer" />		 
+	<bean id="printSubscriber" class="com.rythmos.resource.PrintSubscriber" />
+	<jaxrs:server id="restContainer" address="/">
+		<jaxrs:serviceBeans>
+			<ref bean="helloService"/>	
+			<ref bean="empService"/>	
+		</jaxrs:serviceBeans>
+	
+	</jaxrs:server>
+	
+	
+    
+</beans>

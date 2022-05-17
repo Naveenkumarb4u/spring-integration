@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:int-jms="http://www.springframework.org/schema/integration/jms"
+	xmlns:jaxrs="http://cxf.apache.org/jaxrs"
+	xmlns:jms="http://www.springframework.org/schema/jms"
+	xsi:schemaLocation="http://www.springframework.org/schema/jms http://www.springframework.org/schema/jms/spring-jms-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/integration/jms http://www.springframework.org/schema/integration/jms/spring-integration-jms-4.3.xsd
+		http://cxf.apache.org/jaxrs http://cxf.apache.org/schemas/jaxrs.xsd
+		http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration-4.3.xsd">
+
+	<import resource="classpath:META-INF/cxf/cxf.xml" />
+	<import resource="classpath:META-INF/cxf/cxf-servlet.xml" />
+
+	<context:component-scan base-package="com.rythmos" />
+	<bean id="printer" class="com.rythmos.resource.PrintInput"></bean>
+	<bean id="mySplitter" class="com.rythmos.resource.CustomSplitter"></bean>
+	<bean id="splitPrinter" class="com.rythmos.resource.PrintSplitter"></bean>
+	<bean id="aggregator" class="com.rythmos.resource.PrintAggregater"></bean>
+	
+	<int:channel id="requestChannel"></int:channel>
+	<int:channel id="responseChannel"></int:channel>
+	<int:channel id="splitChannel"></int:channel>
+	<int:channel id="splittedChannel"></int:channel>
+	<int:channel id="replyChannel"></int:channel>
+	<int:gateway id="empGateway" service-interface="com.rythmos.service.Emp" default-request-channel="requestChannel" default-reply-channel="replyChannel"></int:gateway>
+
+ 	<int:service-activator ref="printer" input-channel="requestChannel" output-channel="splitChannel" method="display"></int:service-activator>
+ 	
+ 	<int:splitter ref="mySplitter" input-channel="splitChannel" output-channel="splittedChannel" method="split" ></int:splitter>
+ 	
+ 	<int:service-activator ref="splitPrinter" input-channel="splittedChannel" output-channel="responseChannel" method="display"></int:service-activator>
+ 	
+ 	<int:aggregator input-channel="responseChannel" output-channel="agChannel" ></int:aggregator>
+ 	
+ 	<int:service-activator ref="aggregator" input-channel="agChannel" output-channel="replyChannel" method="display"></int:service-activator>
+ 	
+ 	
+ 	<jaxrs:server id="restContainer" address="/">
+		<jaxrs:serviceBeans>
+			<ref bean="helloService"></ref>
+			<ref bean="empGateway"></ref>
+		</jaxrs:serviceBeans>
+	</jaxrs:server>
+
+</beans>

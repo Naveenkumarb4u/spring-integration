@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:int-stream="http://www.springframework.org/schema/integration/stream"
+	xsi:schemaLocation="http://www.springframework.org/schema/integration/stream http://www.springframework.org/schema/integration/stream/spring-integration-stream-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration-4.3.xsd">
+
+
+<context:component-scan base-package="com.rythmos"></context:component-scan>
+
+<int:gateway id="bar" service-interface="com.rythmos.service.Bar"></int:gateway>
+
+<int:channel id="orders"></int:channel>
+
+<int:splitter input-channel="orders" output-channel="drinks"></int:splitter>
+<int:channel id="orders"></int:channel>
+
+<int:channel id="coldDrinks">
+        <int:queue capacity="10"/>
+</int:channel>
+<int:service-activator input-channel="coldDrinks" ref="barman"
+                       method="getColdDrink" output-channel="preparedDrinks"/>
+
+ <int:channel id="hotDrinks">
+    <int:queue capacity="10"/>
+ </int:channel>
+    <int:service-activator input-channel="hotDrinks" ref="barman"
+                       method="getHotDrink" output-channel="preparedDrinks"/>
+                       
+ <int:channel id="preparedDrinks"></int:channel>
+
+<int:aggregator input-channel="preparedDrinks" ref="waiter"
+                method="prepareDelivery" output-channel="deliveries"/>
+	
+	<int-stream:stdout-channel-adapter id="deliveries"/>
+<bean id="orderSplitter"
+                class="com.rythmos.bar.OrderSplitter"/>
+
+    <bean id="drinkRouter"
+                class="com.rythmos.bar.DrinkRouter"/>
+
+    <bean id="barman" class="com.rythmos.bar.Barman"/>
+
+    <bean id="waiter" class="com.rythmos.bar.Waiter"/>
+
+    <int:poller id="poller" default="true" fixed-delay="1000"/>
+
+</beans>
